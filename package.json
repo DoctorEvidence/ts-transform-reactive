@@ -16,10 +16,9 @@
   "keywords": [
     "typescript",
     "transform",
-    "css-modules",
     "modules"
   ],
-  "author": "Long Ho",
+  "author": "Kris Zyp",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/kriszyp/ts-transform-reactive/issues"
@@ -39,6 +38,5 @@
     "typescript": "^2.5.2"
   },
   "dependencies": {
-    "css-modules-require-hook": "^4.0.6"
   }
 }
