@@ -1,35 +1,73 @@
 import { reactive, direct } from 'alkali'
-class Sub {
-  bar: boolean
-}
-@reactive
-class TestReactive {
-  foo = 'hi'
-  bar = 3
-  constructor() {
-    this.bar = 4
+var tests = {
+  basic: function() {
+    @reactive
+    let num = 3
+    let a = num
+    @reactive
+    num = 4
+    console.assert(a == 4)
+  },
+  sum: function() {
+    @reactive
+    let num, sum = num + 5
+    @reactive
+    num = 4
+    console.assert(sum == 9)  
+  },
+  bool: function() {
+    @reactive
+    let bool = true
+    @reactive
+    let f = !bool
+  },
+  cond: function() {
+    @reactive
+    let f = true, num = 3, sum = 4, cond = {
+      condProp: f ? num : sum
+    }
+  },
+  call: function() {
+    @reactive
+    let num = 3, sum = 4
+    @reactive
+    let result = Math.min(num, sum)
+    console.assert(result == 3
+  },
+  object: function() {
+    @reactive
+    let num = 3, sum = 4, object = {
+      num,
+      sum: sum * 2,
+      three: 3
+    }
+  },
+  array: function() {
+    @reactive
+    let num = 3, sum = 4
+    @reactive
+    return Math.max.apply(null, [num, 3, sum])
+  },
+  reactiveClass: function() {
+    @reactive
+    class Sub {
+      prop: string
+    }
+    @reactive
+    class TestReactive {
+      foo = 'hi'
+      @direct
+      bar = 3
+      str: string
+      sub: Sub
+    }
+    let t = new TestReactive()
+    t.sub.prop.put('hi')
   }
-  @direct
-  sub: Sub
 }
-let t = new TestReactive()
-@reactive
-let b = t.bar - 4
-@reactive
-function foo() {
-  b = 6
-  let f = () => {
-    do {
-      if (b) {
-        return b
-      }
-    } while ((t.bar && 3))
-  }
-  alert({
-    title: !t.bar,
-    message: 'hi'
-  })
-  for (var i in t) {
-    console.log(i)
-  }
+var test
+for (var testName in tests) {
+  tests[testName]()
 }
+
+

@@ -7,34 +7,63 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const alkali_1 = require("alkali");
-class Sub {
-}
-let TestReactive = class TestReactive {
-    constructor() {
-        this.foo = 'hi';
-        this.bar = 3;
-        this.bar = 4;
+var tests = {
+    basic: function () {
+        let num = alkali_1.reactive.from(3);
+        let a = num;
+        (num && num.put ? num : num = alkali_1.reactive.from()).put(4);
+        console.assert(a == 4);
+    },
+    sum: function () {
+        let num = alkali_1.reactive.from(), sum = alkali_1.reactive.from(alkali_1.reactive.add(num, 5));
+        (num && num.put ? num : num = alkali_1.reactive.from()).put(4);
+        console.assert(sum == 9);
+    },
+    bool: function () {
+        let bool = alkali_1.reactive.from(true);
+        let f = alkali_1.reactive.from(alkali_1.reactive.not(bool));
+    },
+    cond: function () {
+        let f = alkali_1.reactive.from(true), num = alkali_1.reactive.from(3), sum = alkali_1.reactive.from(4), cond = alkali_1.reactive.from(alkali_1.reactive.obj({
+            condProp: alkali_1.reactive.cond(f, num, sum)
+        }));
+    },
+    call: function () {
+        let num = alkali_1.reactive.from(3), sum = alkali_1.reactive.from(4);
+        let result = alkali_1.reactive.from(alkali_1.reactive.mcall(Math, min, [num, sum]));
+        console.assert(result == 3);
+    },
+    object: function () {
+        let num = alkali_1.reactive.from(3), sum = alkali_1.reactive.from(4), object = alkali_1.reactive.from(alkali_1.reactive.obj({
+            num,
+            sum: alkali_1.reactive.multiply(sum, 2),
+            three: 3
+        }));
+    },
+    array: function () {
+        let num = alkali_1.reactive.from(3), sum = alkali_1.reactive.from(4);
+        return alkali_1.reactive.mcall(Math.max, apply, [null, alkali_1.reactive.obj([num, 3, sum])]);
+    },
+    reactiveClass: function () {
+        let Sub = class Sub {
+        };
+        Sub = __decorate([
+            alkali_1.reactive.cls({ prop: "string" })
+        ], Sub);
+        let TestReactive = class TestReactive {
+            constructor() {
+                this.foo = 'hi';
+                this.bar = 3;
+            }
+        };
+        TestReactive = __decorate([
+            alkali_1.reactive.cls({ foo: "string", str: "string", sub: Sub })
+        ], TestReactive);
+        let t = new TestReactive();
+        t.sub.prop.put('hi');
     }
 };
-TestReactive = __decorate([
-    alkali_1.reactive.cls({ foo: "string", bar: "number" })
-], TestReactive);
-let t = new TestReactive();
-let b = alkali_1.reactive.subtract(t.bar, 4);
-function foo() {
-    (b && b.put ? b : b = alkali_1.reactive.from()).put(6);
-    let f = () => {
-        do {
-            if (alkali_1.reactive.val(b)) {
-                return b;
-            }
-        } while (alkali_1.reactive.val((alkali_1.reactive.val(t.bar) && 3)));
-    };
-    alert(alkali_1.reactive.obj({
-        title: alkali_1.reactive.not(t.bar),
-        message: 'hi'
-    }));
-    for (var i in alkali_1.reactive.val(t)) {
-        console.log(i);
-    }
+var test;
+for (var testName in tests) {
+    tests[testName]();
 }

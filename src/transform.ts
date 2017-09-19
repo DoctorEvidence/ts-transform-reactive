@@ -68,11 +68,22 @@ function getTypeDescriptor(property: ts.PropertyDeclaration): ts.Expression {
 
 function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
     const visitor: ts.Visitor = (node: ts.Node): ts.VisitResult<ts.Node> => {
-        if (pullDecorator('reactive', node)) {
-            (node as HasReactive).isReactive = true
-            return reactiveVisitor(node)
+        if (pullDecorator('reactive', node) || (node as any).isReactive) {
+            return enterReactiveRegion(node)
         }
         return ts.visitEachChild(node, visitor, ctx)
+    }
+    function enterReactiveRegion(node) {
+        (node as HasReactive).isReactive = true
+        if (ts.isMissingDeclaration(node)) {
+            // @reactive
+            // a = b
+            // is interpreted as a missing declaration
+            let statements = (node.parent as ts.Block).statements;
+            (statements[statements.indexOf(node) + 1] as any).isReactive = true
+            return node
+        }
+        return reactiveVisitor(node)
     }
     const reactiveVisitor: ts.Visitor = (node: ts.Node): ts.VisitResult<ts.Node> => {
         if (pullDecorator('direct', node)) {
@@ -104,7 +115,7 @@ function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
                 }
                 let classDescriptor = getClassDescriptor(parentClass)
                 let propertyDescriptor = ts.createPropertyAssignment(property.name, getTypeDescriptor(property))
-                classDescriptor.properties.push(propertyDescriptor)
+                classDescriptor.properties = ts.createNodeArray(classDescriptor.properties.concat([propertyDescriptor]))
                 break
 
             case ts.SyntaxKind.BinaryExpression:
@@ -140,6 +151,13 @@ function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
                 }
                 return getReactiveCall(operators[unaryOperator], [unary.operand])
 
+            case ts.SyntaxKind.ConditionalExpression:
+                let conditional = node as ts.ConditionalExpression
+                return getReactiveCall('cond', [
+                    reactiveVisitor(conditional.condition),
+                    reactiveVisitor(conditional.whenTrue),
+                    reactiveVisitor(conditional.whenFalse)])
+
             case ts.SyntaxKind.CallExpression:
                 let callParent = node.parent || ((node as any).original.parent as ts.Node)
                 if (ts.isExpressionStatement(callParent) || ts.isForStatement(callParent))
@@ -157,13 +175,17 @@ function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
             case ts.SyntaxKind.ObjectLiteralExpression: case ts.SyntaxKind.ArrayLiteralExpression:
                 return getReactiveCall('obj', [node as ts.Expression])
 
-/*            case ts.SyntaxKind.VariableDeclaration:
-                return ts.createCall(
+            case ts.SyntaxKind.VariableDeclaration:
+                let variableDecl = node as ts.VariableDeclaration
+                return ts.createVariableDeclaration(
+                    variableDecl.name,
+                    undefined,
+                    ts.createCall(
                     ts.createPropertyAccess(
-                        ts.createIdentifier('reactive'),
+                        reactiveReference,
                         ts.createIdentifier('from')),
                     [],
-                    [node as ts.Expression])*/
+                    variableDecl.initializer ? [variableDecl.initializer] : []))
 
           //  default:
 
@@ -172,15 +194,13 @@ function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
         return node
     }
     const immediateVisitor: ts.Visitor = (node: ts.Node): ts.VisitResult<ts.Node> => {
-        if (pullDecorator('reactive', node)) {
-            (node as HasReactive).isReactive = true
-            return reactiveVisitor(node)
+        if (pullDecorator('reactive', node) || (node as any).isReactive) {
+            return enterReactiveRegion(node)
         }
         switch(node.kind) {
             case ts.SyntaxKind.ConditionalExpression:
                 let conditional = node as ts.ConditionalExpression
-                conditional.condition = asValue(conditional.condition)
-                break
+                return ts.updateConditional(conditional, asValue(conditional.condition), conditional.whenTrue, conditional.whenFalse)
             case ts.SyntaxKind.BinaryExpression:
                 let binary = node as ts.BinaryExpression
                 if (binary.operatorToken.kind == ts.SyntaxKind.AmpersandAmpersandToken ||
@@ -233,7 +253,7 @@ function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
                 if (name === 'reactive') {
                     reactiveReference = visitedDecorator.expression
                 }
-                node.decorators.splice(i, 1)
+                node.decorators = ts.createNodeArray(node.decorators.slice(0, i).concat(node.decorators.slice(i + 1)))
                 if (node.decorators.length == 0)
                     node.decorators = undefined
                 return true
@@ -270,14 +290,14 @@ function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
         }
 
         let classDescriptor: ts.ObjectLiteralExpression
-        parentClass.decorators.push(
+        parentClass.decorators = ts.createNodeArray(parentClass.decorators.concat([
             ts.createDecorator(
                 ts.createCall(
                     ts.createPropertyAccess(
                         reactiveReference,
                         ts.createIdentifier('cls')),
                     [],
-                    [classDescriptor = ts.createObjectLiteral([])])))
+                    [classDescriptor = ts.createObjectLiteral([])]))]))
         return classDescriptor
 
     }
