@@ -51,17 +51,25 @@ birthYear.valueOf() -> 1977
 someone.age = 45
 birthYear.valueOf() -> 1972
 ```
-Function and method calls can be made written in reactive expressions as well. These calls will be performed lazily/on-demand, and reexecuted as needed. The target function will be called with the values of the variables (not the variables themselves). For example:
+Function and method calls can be written in reactive expressions as well. These calls will be performed lazily/on-demand, and reexecuted as needed. The target function will be called with the values of the variables (not the variables themselves). For example:
 ```
 @reactive
 let smallest = Math.min(a, b)
+// smallest will be a reactive variable, computed from inputs a and b
 ```
 
 When using the alkali `reactive`, to create these variables, they can be bound to DOM elements using alkali constructors or any other alkali target.
 ```
-import { reactive, Div } from 'alkali'
+import { reactive, Div, Span, Input } from 'alkali'
+
+@reactive
+let a = 1, b = 2, sum = a + b
 // create a div with its text bound to the sum
-parent.appendChild(new Div(sum))
+parent.appendChild(
+  new Div([
+    Input(a), // each input bound to the variable
+    Input(b),
+    Span(sum)])) // will reactively compute sum
 ```
 And the reactive expressions maintain operator relationships, so alkali's reversible data flow is supported as well:
 ```
