@@ -1,4 +1,5 @@
-import { reactive, direct } from 'alkali'
+import { reactive, direct, Variable } from 'alkali'
+import { Something } from './some-types'
 var tests = {
   basic: function() {
     @reactive
@@ -48,10 +49,26 @@ var tests = {
     @reactive
     return Math.max.apply(null, [num, 3, sum])
   },
+  reactiveProperty: function() {
+    class WithProps {
+      @reactive
+      str: string
+      @reactive
+      obj: {
+        b: boolean,
+        ao: {}[],
+        as: string[]
+      }
+      @reactive
+      some: Something
+      nonReactive: number
+    }
+  },
   reactiveClass: function() {
     @reactive
     class Sub {
       prop: string
+      v: Variable
     }
     @reactive
     class TestReactive {

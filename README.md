@@ -1,15 +1,15 @@
-# ts-transform-alkali
+# ts-transform-reactive
 This TypeScript transformer provides "reactive" transforms of TypeScript code. Reactive code is defined with a `@reactive` decorator, and the code classes, properties, expressions, and functions that are marked as reactive will be transformed to code with classes and properties that can observed and lazily evaluated, and expressions than yield new input-varying values as well. This relies on [alkali](https://github.com/kriszyp/alkali) for variable operations that produce reactively bound variables.
 
 ## Installation
 
 ```sh
-$ npm install ts-transform-alkali
+$ npm install ts-transform-reactive
 ```
 And then put this in your list of `before` transformers when you compile TS. If you are using webpack/ts-loader, this is a simple addition to your `ts-loader` config:
 ```
 // webpack.config.js:
-const alkaliTransformer = require('ts-transform-alkali').default
+const reactiveTransformer = require('ts-transform-reactive').default
 ...
 // exports.module.rules[]
     {
@@ -17,7 +17,7 @@ const alkaliTransformer = require('ts-transform-alkali').default
       loader: 'ts-loader',
       options: {
           getCustomTransformers: () => ({
-              before: [alkaliTransformer]
+              before: [reactiveTransformer()]
           }),
           transpileOnly: true
       }
@@ -93,20 +93,20 @@ The `react` function can take multiple arguments, the last argument output will 
 
 ```json
 {
-  "plugins": ["transform-alkali"]
+  "plugins": ["transform-reactive"]
 }
 ```
 
 ### Via CLI
 
 ```sh
-$ babel --plugins transform-alkali
+$ babel --plugins transform-reactive
 ```
 
 ### Via Node API
 
 ```javascript
 require("babel-core").transform("code", {
-  plugins: ["transform-alkali"]
+  plugins: ["transform-reactive"]
 });
 ```

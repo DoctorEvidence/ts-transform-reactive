@@ -7,6 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const alkali_1 = require("alkali");
+const some_types_1 = require("./some-types");
 var tests = {
     basic: function () {
         let num = alkali_1.reactive.from(3);
@@ -30,7 +31,7 @@ var tests = {
     },
     call: function () {
         let num = alkali_1.reactive.from(3), sum = alkali_1.reactive.from(4);
-        let result = alkali_1.reactive.from(alkali_1.reactive.mcall(Math, min, [num, sum]));
+        let result = alkali_1.reactive.from(alkali_1.reactive.mcall(Math, "min", [num, sum]));
         console.assert(result == 3);
     },
     object: function () {
@@ -42,13 +43,26 @@ var tests = {
     },
     array: function () {
         let num = alkali_1.reactive.from(3), sum = alkali_1.reactive.from(4);
-        return alkali_1.reactive.mcall(Math.max, apply, [null, alkali_1.reactive.obj([num, 3, sum])]);
+        return alkali_1.reactive.mcall(Math.max, "apply", [null, alkali_1.reactive.obj([num, 3, sum])]);
+    },
+    reactiveProperty: function () {
+        class WithProps {
+        }
+        __decorate([
+            alkali_1.reactive.prop("string")
+        ], WithProps.prototype, "str", void 0);
+        __decorate([
+            alkali_1.reactive.prop({ b: "boolean", ao: [{}], as: ["string"] })
+        ], WithProps.prototype, "obj", void 0);
+        __decorate([
+            alkali_1.reactive.prop(some_types_1.Something)
+        ], WithProps.prototype, "some", void 0);
     },
     reactiveClass: function () {
         let Sub = class Sub {
         };
         Sub = __decorate([
-            alkali_1.reactive.cls({ prop: "string" })
+            alkali_1.reactive.cls({ prop: "string", v: alkali_1.Variable })
         ], Sub);
         let TestReactive = class TestReactive {
             constructor() {
