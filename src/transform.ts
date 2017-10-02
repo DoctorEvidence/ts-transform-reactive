@@ -28,6 +28,7 @@ const operators = {
  */
 export interface Opts {
     devMode?: boolean
+    reactiveDecorators?: string[]
 }
 interface TypeNodeWithTypeName extends ts.TypeNode {
     typeName: ts.Expression
@@ -36,7 +37,8 @@ interface TypeNodeWithTypeName extends ts.TypeNode {
 interface HasReactive extends ts.Node {
     isReactive: boolean
 }
-function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
+function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile, opts: Opts) {
+    let reactiveDecoratorNames = opts.reactiveDecorators || ['reactive']
     // disable the eliding of module
     let resolver = (ctx as any).getEmitResolver()
     let isReferencedAliasDeclaration = resolver.isReferencedAliasDeclaration
@@ -88,7 +90,7 @@ function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
     }
 
     const visitor: ts.Visitor = (node: ts.Node): ts.VisitResult<ts.Node> => {
-        if (pullDecorator('reactive', node) || (node as any).isReactive) {
+        if (reactiveDecoratorNames.some(decoratorName => pullDecorator(decoratorName, node)) || (node as any).isReactive) {
             return enterReactiveRegion(node)
         }
         return ts.visitEachChild(node, visitor, ctx)
@@ -116,7 +118,7 @@ function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
                 break
 
             case ts.SyntaxKind.Block:
-                if (!(node.parent as HasReactive).isReactive) {
+                if (!node.parent || !(node.parent as HasReactive).isReactive) {
                     return immediateVisitor(node)
                 }
                 break
@@ -130,6 +132,8 @@ function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
             case ts.SyntaxKind.PropertyDeclaration:
                 let property = node as ts.PropertyDeclaration
                 let parentClass = node.parent
+                if (!parentClass)
+                    break
                 if (node.parent.kind != ts.SyntaxKind.ClassDeclaration) {
                     throw new Error('Property declared in non-class')
                 }
@@ -184,7 +188,7 @@ function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
 
             case ts.SyntaxKind.CallExpression:
                 let callParent = node.parent || ((node as any).original.parent as ts.Node)
-                if (ts.isExpressionStatement(callParent) || ts.isForStatement(callParent))
+                if (!callParent || ts.isExpressionStatement(callParent) || ts.isForStatement(callParent))
                     break // if parent is statement, don't transform call
                 let call = node as ts.CallExpression
                 let target = call.expression
@@ -220,7 +224,7 @@ function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
         return node
     }
     const immediateVisitor: ts.Visitor = (node: ts.Node): ts.VisitResult<ts.Node> => {
-        if (pullDecorator('reactive', node) || (node as any).isReactive) {
+        if (reactiveDecoratorNames.some(decoratorName => pullDecorator(decoratorName, node)) || (node as any).isReactive) {
             return enterReactiveRegion(node)
         }
         switch(node.kind) {
@@ -276,7 +280,7 @@ function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
         node.decorators && node.decorators.some((decorator, i) => {
             if (decorator.expression.getText(sf) === name) {
                 let visitedDecorator = ts.visitEachChild(decorator, visitor, ctx)
-                if (name === 'reactive') {
+                if (reactiveDecoratorNames.indexOf(name) > -1) {
                     reactiveReference = visitedDecorator.expression
                 }
                 node.decorators = ts.createNodeArray(node.decorators.slice(0, i).concat(node.decorators.slice(i + 1)))
@@ -331,8 +335,9 @@ function visitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
     return visitor
 }
 
-export default function(/*opts?: Opts*/) {
+export default function(opts?: Opts) {
+    opts = opts || {}
     return (ctx: ts.TransformationContext): ts.Transformer<ts.SourceFile> => {
-        return (sf: ts.SourceFile) => ts.visitNode(sf, visitor(ctx, sf))
+        return (sf: ts.SourceFile) => ts.visitNode(sf, visitor(ctx, sf, opts))
     }
 }
